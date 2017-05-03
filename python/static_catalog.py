@@ -30,7 +30,7 @@ def load_data():
     client = MongoClient('localhost', 27017)
     db = client['radio'] 
     
-    catalog = db['catalog_dr1']
+    catalog = db['catalog_localswire_dr1']
 
     return catalog
 
@@ -39,24 +39,21 @@ def flat_version(catalog):
     # Write the MongoDB catalog to a CSV file, with the fields described here:
     # http://radiogalaxyzoo.pbworks.com/w/page/108921379/DR1%20testing
 
-    filename = '%s/csv/static_rgz_flat%s.csv' % (rgz_path,suffix)
+    filename = '%s/csv/static_rgz_localswire_flat%s.csv' % (rgz_path,suffix)
 
     with open(filename,'w') as f:
 
         # Manually order fields
-        fields = ['catalog_id', 'rgz_name', 'zooniverse_id', 'first_id', \
+        fields = ['catalog_id', 'rgz_name', 'zooniverse_id', 'atlas_id', \
                   'radio.ra', 'radio.dec', 'consensus.ir_ra', 'consensus.ir_dec', 'consensus.ir_flag', 'consensus.n_total', 'consensus.n_radio', \
                       'consensus.n_ir', 'consensus.radio_level', 'consensus.ir_level', 'radio.number_components', 'radio.number_peaks', \
                       'radio.max_angular_extent', 'radio.total_solid_angle', 'radio.outermost_level', 'radio.max_physical_extent', 'radio.total_cross_section', \
                   'component.peak_fluxes', 'component.peak_flux_errs', 'component.peak_ras', 'component.peak_decs', \
                   'peak.fluxes', 'peak.flux_errs', 'peak.ras', 'peak.decs', \
                   'radio.total_flux', 'radio.total_flux_err', 'radio.total_luminosity', 'radio.total_luminosity_err', \
-                  'AllWISE.designation', 'AllWISE.ra', 'AllWISE.dec', \
-                      'AllWISE.w1mpro', 'AllWISE.w1sigmpro', 'AllWISE.w1snr', 'AllWISE.w2mpro', 'AllWISE.w2sigmpro', 'AllWISE.w2snr', \
-                      'AllWISE.w3mpro', 'AllWISE.w3sigmpro', 'AllWISE.w3snr', 'AllWISE.w4mpro', 'AllWISE.w4sigmpro', 'AllWISE.w4snr', 'AllWISE.number_matches', \
-                  'SDSS.objID', 'SDSS.ra', 'SDSS.dec', 'SDSS.u', 'SDSS.u_err', 'SDSS.r', 'SDSS.r_err', 'SDSS.g', 'SDSS.g_err', 'SDSS.i', 'SDSS.i_err', \
-                      'SDSS.z', 'SDSS.z_err', 'SDSS.photo_redshift', 'SDSS.photo_redshift_err', 'SDSS.spec_redshift', 'SDSS.spec_redshift_err', \
-                      'SDSS.morphological_class', 'SDSS.spectral_class', 'SDSS.number_matches', \
+                  'SWIRE.designation', 'SWIRE.ra', 'SWIRE.dec', \
+                      'SWIRE.flux_ap2_36', 'SWIRE.flux_ap2_45', 'SWIRE.flux_ap2_58', 'SWIRE.flux_ap2_80', \
+                      'SWIRE.number_matches', \
                   'duplicate_sources.share_components', 'duplicate_sources.match_components', 'duplicate_sources.WISE_cat_mismatch']
         header = ''
         for field in fields:
@@ -132,6 +129,10 @@ def flat_version(catalog):
                     if 'ir_ra' in d['consensus']:
                         ir_ra += d['consensus']['n_ir'] * d['consensus']['ir_ra']
                         ir_dec += d['consensus']['n_ir'] * d['consensus']['ir_dec']
+                if not n_ir:
+                   import logging
+                   logging.warning('Skipping no IR {}'.format(c))
+                   continue
                 ir_ra /= n_ir
                 ir_dec /= n_ir
                 c['consensus']['n_total'] = n_total
@@ -188,25 +189,22 @@ def paired_version(catalog):
     # one that contains host information, and one that contains component information
     # http://radiogalaxyzoo.pbworks.com/w/page/108921379/DR1%20testing
 
-    host_filename = '%s/csv/static_rgz_host%s.csv' % (rgz_path,suffix)
-    component_filename = '%s/csv/static_rgz_component%s.csv' % (rgz_path,suffix)
+    host_filename = '%s/csv/static_rgz_localswire_host%s.csv' % (rgz_path,suffix)
+    component_filename = '%s/csv/static_rgz_localswire_component%s.csv' % (rgz_path,suffix)
     comp_count = 0
 
     with open(host_filename,'w') as hf:
 
         with open(component_filename,'w') as cf:
 
-            h_fields = ['catalog_id', 'rgz_name', 'zooniverse_id', 'first_id', \
+            h_fields = ['catalog_id', 'rgz_name', 'zooniverse_id', 'atlas_id', \
                         'radio.ra', 'radio.dec', 'consensus.ir_ra', 'consensus.ir_dec', 'consensus.ir_flag', 'consensus.n_total', 'consensus.n_radio', \
                             'consensus.n_ir', 'consensus.radio_level', 'consensus.ir_level', 'radio.number_components', 'radio.number_peaks', \
                             'radio.max_angular_extent', 'radio.total_solid_angle', 'radio.outermost_level', 'radio.max_physical_extent', 'radio.total_cross_section', \
                         'radio.total_flux', 'radio.total_flux_err', 'radio.total_luminosity', 'radio.total_luminosity_err', \
-                        'AllWISE.designation', 'AllWISE.ra', 'AllWISE.dec', \
-                            'AllWISE.w1mpro', 'AllWISE.w1sigmpro', 'AllWISE.w1snr', 'AllWISE.w2mpro', 'AllWISE.w2sigmpro', 'AllWISE.w2snr', \
-                            'AllWISE.w3mpro', 'AllWISE.w3sigmpro', 'AllWISE.w3snr', 'AllWISE.w4mpro', 'AllWISE.w4sigmpro', 'AllWISE.w4snr', 'AllWISE.number_matches', \
-                        'SDSS.objID', 'SDSS.ra', 'SDSS.dec', 'SDSS.u', 'SDSS.u_err', 'SDSS.r', 'SDSS.r_err', 'SDSS.g', 'SDSS.g_err', 'SDSS.i', 'SDSS.i_err', \
-                            'SDSS.z', 'SDSS.z_err', 'SDSS.photo_redshift', 'SDSS.photo_redshift_err', 'SDSS.spec_redshift', 'SDSS.spec_redshift_err', \
-                            'SDSS.morphological_class', 'SDSS.spectral_class', 'SDSS.number_matches', \
+                        'SWIRE.designation', 'SWIRE.ra', 'SWIRE.dec', \
+                            'SWIRE.flux_ap2_36', 'SWIRE.flux_ap2_45', 'SWIRE.flux_ap2_58', 'SWIRE.flux_ap2_80', \
+                            'SWIRE.number_matches', \
                         'duplicate_sources.share_components', 'duplicate_sources.match_components', 'duplicate_sources.WISE_cat_mismatch']
 
             h_header = ''
@@ -264,6 +262,10 @@ def paired_version(catalog):
                         if 'ir_ra' in d['consensus']:
                             ir_ra += d['consensus']['n_ir'] * d['consensus']['ir_ra']
                             ir_dec += d['consensus']['n_ir'] * d['consensus']['ir_dec']
+                    if not n_ir:
+                        import logging
+                        logging.warning('Skipping no IR: {}'.format(c))
+                        continue
                     ir_ra /= n_ir
                     ir_dec /= n_ir
                     c['consensus']['n_total'] = n_total

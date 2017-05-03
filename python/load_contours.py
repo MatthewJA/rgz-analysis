@@ -10,14 +10,15 @@ import os
 import json
 import requests
 
-def make_pathdict(local=False):
+def make_pathdict(local=False, atlas_only=False):
 
     # Get dictionary for finding the path to FITS files and WCS headers
 
     paths = ['/Volumes/REISEPASS', \
              '/Volumes/3TB', \
              '/data/extragal/willett', \
-	     '/data/tabernacle/larry/RGZdata/rawdata']
+	     '/data/tabernacle/larry/RGZdata/rawdata', \
+             '/mimsy/alger/dr1']
 
     data_found = False
     for dp in paths:
@@ -34,17 +35,17 @@ def make_pathdict(local=False):
     pathdict = {}
 
     # FIRST
-
-    with open('%s/first_fits.txt' % rgz_filepath) as f:
-        lines = f.readlines()
+    if not atlas_only:
+        with open('%s/first_fits.txt' % rgz_filepath) as f:
+            lines = f.readlines()
     
-    for l in lines:
-        spl = l.split(' ')
-        dirno = int(spl[0])
-        source = spl[1].strip()
-        pathdict[source] = {}
-        pathdict[source]['contours'] = '%s/RGZ-full.%i/CONTOURS/%s.json' % (img_filepath,dirno,source)
-        pathdict[source]['radio'] = '%s/RGZ-full.%i/FIRST-IMGS/%s.fits' % (img_filepath,dirno,source)
+        for l in lines:
+            spl = l.split(' ')
+            dirno = int(spl[0])
+            source = spl[1].strip()
+            pathdict[source] = {}
+            pathdict[source]['contours'] = '%s/RGZ-full.%i/CONTOURS/%s.json' % (img_filepath,dirno,source)
+            pathdict[source]['radio'] = '%s/RGZ-full.%i/FIRST-IMGS/%s.fits' % (img_filepath,dirno,source)
 
     # ATLAS
 

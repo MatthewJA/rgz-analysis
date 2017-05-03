@@ -109,7 +109,7 @@ class Node(object):
             pList = []
         if self.children == []:
             bbox = fn.bboxToDS9(fn.findBox(self.value['arr']), self.imgSize)[0] #bbox of innermost contour
-            fluxDensityJyBeam = self.img[ bbox[3]-1:bbox[1]+1, bbox[2]-1:bbox[0]+1 ].max() #peak flux in bbox, with 1 pixel padding
+            fluxDensityJyBeam = self.img[ int(bbox[3]-1):int(bbox[1]+1), int(bbox[2]-1):int(bbox[0]+1) ].max() #peak flux in bbox, with 1 pixel padding
             locP = np.where(self.img == fluxDensityJyBeam) #location in pixels
             locRD = self.w.wcs_pix2world( np.array( [[locP[1][0]+1, locP[0][0]+1]] ), 1) #location in ra and dec
             peak = dict(ra=locRD[0][0], dec=locRD[0][1], flux=fluxDensityJyBeam*1000)

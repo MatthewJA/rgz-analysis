@@ -114,12 +114,17 @@ def determine_paths(paths):
         print paths
         return None
 
-rgz_path = determine_paths(('/Users/willettk/Astronomy/Research/GalaxyZoo/rgz-analysis','/data/tabernacle/larry/RGZdata/rgz-analysis'))
+rgz_path = determine_paths(('/Users/willettk/Astronomy/Research/GalaxyZoo/rgz-analysis','/data/tabernacle/larry/RGZdata/rgz-analysis', '/mimsy/alger/dr1/rgz'))
 #rgz_path = '/home/garon/Documents/RGZdata/rgz-analysis'
-data_path = determine_paths(('/Volumes/REISEPASS','/Volumes/3TB','/data/extragal/willett','/data/tabernacle/larry/RGZdata/rawdata'))
+data_path = determine_paths(('/Volumes/REISEPASS','/Volumes/3TB','/data/extragal/willett','/data/tabernacle/larry/RGZdata/rawdata', '/mimsy/alger/dr1/raw_images'))
 plot_path = "{0}/rgz/plots".format(data_path)
 
-pathdict = make_pathdict()
+ATLAS_GS = []
+with open(os.path.join(rgz_path, 'atlas_gold_standard.txt')) as f:
+    for row in f:
+        ATLAS_GS.append(row.strip())  # Zooniverse ID
+
+pathdict = make_pathdict(atlas_only=True)
 
 ########################################
 # Begin the actual code
@@ -1236,24 +1241,19 @@ def weight_users(unique_users, scheme, min_gs=5, min_agree=0.5, scaling=5):
     
     # Assigns a weight to users based on their agreement with the gold standard sample as classified by RGZ science team
     
-    gs_count = subjects.find({'goldstandard':True}).count()
-    if gs_count < 1:
-        update_gs_subjects()
-    
-    ex_count = classifications.find({'expert':True}).count()
-    if ex_count < 1:
-        update_experts()
+    gs_count = subjects.find({'zooniverse_id': {'$in': ATLAS_GS}}).count()
+    ex_count = classifications.find({'zooniverse_id': {'$in': ATLAS_EX}}).count()
     
     # Find the science team answers:
     
-    gs_zids = [s['zooniverse_id'] for s in subjects.find({"goldstandard":True})]
+    gs_zids = ATLAS_GS
     science_answers = {}
     
     for zid in gs_zids:
         s = checksum(zid,experts_only=True)
         science_answers[zid] = s['answer'].keys()
     
-    gs_ids = [s['_id'] for s in subjects.find({"goldstandard":True})]
+    gs_ids = [s['_id'] for s in subjects.find({'zooniverse_id': {'$in': ATLAS_GS}})]
     count = 0
 
     # For each user, find the gold standard subjects they saw and whether it agreed with the experts
@@ -1346,6 +1346,7 @@ if __name__ == "__main__":
             #   on the gold standard subjects. If weights = 0 or weights = 1, each user's vote
             #   is counted equally in the consensus. If weights > 1, then their impact is
             #   increased by replicating the classifications. Must be a nonnegative integer.
+            #   weights = 0 disables weights entirely.
             weights = 5
             assert (type(weights) == int) and weights >= 0, 'Weight must be a nonnegative integer'
             scheme = 'scaling'
@@ -1357,7 +1358,9 @@ if __name__ == "__main__":
                 weight_users(unique_users, scheme, min_gs=5, min_agree=0.5, scaling=weights)
 
             # Run the consensus separately for different surveys, since the image parameters are different
-            for survey in ('atlas','first'):
+            for survey in ('atlas',):#('atlas','first'):
+                if survey == 'first':
+                    raise NotImplementedError('Only ATLAS is supported in this file.')
                 run_sample(survey,update,subset,do_plot,weights,scheme)
 
             output = 'Finished at',datetime.datetime.now().strftime('%H:%M:%S.%f')

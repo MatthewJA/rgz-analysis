@@ -5,10 +5,132 @@ from astroquery.exceptions import TimeoutError, TableParseError
 from astroquery.irsa import Irsa
 import numpy as np
 import pandas as pd
+import astropy.io.ascii
+import sklearn.neighbors
 
 #custom modules for the RGZ catalog
 import catalog_functions as fn #contains miscellaneous helper functions
 import contour_node as c #contains Node class
+from consensus import rgz_path
+
+# We'll populate these later and cache them here for speed.
+_swire_tree = None
+_swire_table = None
+def getSWIRE(entry):
+    '''
+    get IR data from SWIRE-CDFS Source Catalog
+    returns updated entry
+    '''
+    # entries look like this:
+    # {'consensus': {'ir_flag': 1, 'n_radio': 8, 'ir_level': 0.875,
+    #  'label': u'A', 'ir_dec': -28.77286937420738, 'n_ir': 7,
+    #  'radio_level': 0.42105263157894735, 'n_total': 19,
+    #  'ir_ra': 51.89192133314939}, 'zooniverse_id': 'ARG0003r17',
+    # 'catalog_id': 1, 'atlas_id': 'CI0002'}
+    ir_pos = coord.SkyCoord(entry['consensus']['ir_ra'], entry['consensus']['ir_dec'], unit=(u.deg,u.deg), frame='icrs')
+    '''    
+    tryCount = 0
+    while(True): #in case of error, wait 10 sec and try again; give up after 5 tries
+        tryCount += 1
+        try:
+            table = Irsa.query_region(ir_pos, catalog='chandra_cat_f05', radius=3.*u.arcsec)
+            break
+        except (TimeoutError, TableParseError) as e:
+            if tryCount>5:
+                message = 'Unable to connect to IRSA; trying again in 10 min'
+                logging.exception(message)
+                print message
+                raise fn.DataAccessError(message)
+            logging.exception(e)
+            time.sleep(10)
+        except Exception as e:
+            if str(e) == 'Query failed\n':
+                if tryCount>5:
+                    message = 'Unable to connect to IRSA; trying again in 10 min'
+                    logging.exception(message)
+                    print message
+                    raise fn.DataAccessError(message)
+                logging.exception(e)
+                time.sleep(10)
+            else:
+                raise
+    '''    
+    global _swire_tree, _swire_table
+    if not _swire_tree:
+        local_path = rgz_path + '/SWIRE3_CDFS_cat_IRAC24_21Dec05.tbl'
+        table_full = astropy.io.ascii.read(local_path)
+        _swire_table = table_full
+        ras = [float(ra) for ra in table_full['ra']]
+        decs = [float(dec) for dec in table_full['dec']]
+        # lats/lons for haversine = decs/ras
+        coords = np.vstack([decs, ras]).T
+        # Convert coords from degrees to radians
+        coords *= np.pi / 180.
+        # Convert coords to cartesian
+        coords_cartesian = np.zeros((coords.shape[0], 3))
+        coords_cartesian[:, 0] = np.sin(coords[:, 0]) * np.cos(coords[:, 1])
+        coords_cartesian[:, 1] = np.sin(coords[:, 0]) * np.sin(coords[:, 1])
+        coords_cartesian[:, 2] = np.cos(coords[:, 0])
+        print('SWIRE coords:', coords)
+        _swire_tree = sklearn.neighbors.KDTree(coords_cartesian, leaf_size=20)
+    # Find within 3".
+    cutoff = 3. / 60. / 60. / 180. * np.pi
+    dists, indices = _swire_tree.query([[
+	np.sin(ir_pos.dec.rad) * np.cos(ir_pos.ra.rad),
+        np.sin(ir_pos.dec.rad) * np.sin(ir_pos.ra.rad),
+        np.cos(ir_pos.dec.rad)]], return_distance=True)
+    dist = dists.ravel()[0]
+    index = indices.ravel()[0]
+    # Convert Euclidean distance back to haversine distance.
+    # E^2 = 2(1 - cos(G)) => G = acos(1 - E^2/2)
+    dist = np.arccos(1 - dist**2 / 2)
+    assert dist >= 0
+    if dist < cutoff:
+        colnames = list(_swire_table.colnames) + ['dist']
+        data = [[_swire_table[c][index]] for c in _swire_table.colnames] + [[dist]]
+        table = astropy.table.Table(data=data, names=colnames)
+    else:
+        logging.info('Distance greater than cutoff: {} rad > {} rad'.format(dist, cutoff))
+        table = []
+
+    if len(table):
+        number_matches = 0
+        match = table[0]
+        dist = match['dist']
+        number_matches += 1
+        if len(table)>1:
+            for row in table:
+                if row['dist']<dist:
+                    match = row
+                    dist = match['dist']
+                    number_matches += 1
+        if match:
+            swire_match = {'designation':match['object'], 'ra':match['ra'], 'dec':match['dec'], 'number_matches':np.int16(number_matches), \
+                          'flux_ap2_36':match['flux_ap2_36'], 'uncf_ap2_36':match['uncf_ap2_36'], \
+                          'flux_ap2_45':match['flux_ap2_45'], 'uncf_ap2_45':match['uncf_ap2_45'], \
+                          'flux_ap2_58':match['flux_ap2_58'], 'uncf_ap2_58':match['uncf_ap2_58'], \
+                          'flux_ap2_80':match['flux_ap2_80'], 'uncf_ap2_80':match['uncf_ap2_80']}
+        else:
+            swire_match = None
+    else:
+        swire_match = None
+
+    logging.info('Match: {}'.format(swire_match))
+    
+    if swire_match:
+        logging.info('SWIRE match found')
+        for key in swire_match.keys():
+            if swire_match[key] is np.ma.masked:
+                swire_match.pop(key)
+            elif swire_match[key] and type(swire_match[key]) is not str:
+                swire_match[key] = swire_match[key].item()
+            elif swire_match[key] == 0:
+                swire_match[key] = 0
+    else:
+        logging.info('No SWIRE match found')
+    
+    return swire_match
+
 
 def getWISE(entry):
     '''
