@@ -28,7 +28,6 @@ def getSWIRE(entry):
     #  'ir_ra': 51.89192133314939}, 'zooniverse_id': 'ARG0003r17',
     # 'catalog_id': 1, 'atlas_id': 'CI0002'}
     ir_pos = coord.SkyCoord(entry['consensus']['ir_ra'], entry['consensus']['ir_dec'], unit=(u.deg,u.deg), frame='icrs')
-    '''    
     tryCount = 0
     while(True): #in case of error, wait 10 sec and try again; give up after 5 tries
         tryCount += 1
@@ -54,44 +53,6 @@ def getSWIRE(entry):
                 time.sleep(10)
             else:
                 raise
-    '''    
-    global _swire_tree, _swire_table
-    if not _swire_tree:
-        local_path = rgz_path + '/SWIRE3_CDFS_cat_IRAC24_21Dec05.tbl'
-        table_full = astropy.io.ascii.read(local_path)
-        _swire_table = table_full
-        ras = [float(ra) for ra in table_full['ra']]
-        decs = [float(dec) for dec in table_full['dec']]
-        # lats/lons for haversine = decs/ras
-        coords = np.vstack([decs, ras]).T
-        # Convert coords from degrees to radians
-        coords *= np.pi / 180.
-        # Convert coords to cartesian
-        coords_cartesian = np.zeros((coords.shape[0], 3))
-        coords_cartesian[:, 0] = np.sin(coords[:, 0]) * np.cos(coords[:, 1])
-        coords_cartesian[:, 1] = np.sin(coords[:, 0]) * np.sin(coords[:, 1])
-        coords_cartesian[:, 2] = np.cos(coords[:, 0])
-        print('SWIRE coords:', coords)
-        _swire_tree = sklearn.neighbors.KDTree(coords_cartesian, leaf_size=20)
-    # Find within 3".
-    cutoff = 3. / 60. / 60. / 180. * np.pi
-    dists, indices = _swire_tree.query([[
-	np.sin(ir_pos.dec.rad) * np.cos(ir_pos.ra.rad),
-        np.sin(ir_pos.dec.rad) * np.sin(ir_pos.ra.rad),
-        np.cos(ir_pos.dec.rad)]], return_distance=True)
-    dist = dists.ravel()[0]
-    index = indices.ravel()[0]
-    # Convert Euclidean distance back to haversine distance.
-    # E^2 = 2(1 - cos(G)) => G = acos(1 - E^2/2)
-    dist = np.arccos(1 - dist**2 / 2)
-    assert dist >= 0
-    if dist < cutoff:
-        colnames = list(_swire_table.colnames) + ['dist']
-        data = [[_swire_table[c][index]] for c in _swire_table.colnames] + [[dist]]
-        table = astropy.table.Table(data=data, names=colnames)
-    else:
-        logging.info('Distance greater than cutoff: {} rad > {} rad'.format(dist, cutoff))
-        table = []
 
     if len(table):
         number_matches = 0
