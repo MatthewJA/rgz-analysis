@@ -38,8 +38,8 @@ def RGZcatalog():
     
     #connect to database of subjects
     subjects = db['radio_subjects']
-    consensus = db['consensus_dr1']
-    catalog = db['catalog_localswire_dr1'] #this is being populated by this program
+    consensus = db['weighted_consensus_dr1']
+    catalog = db['weighted_catalog_dr1'] #this is being populated by this program
     if catalog.count():
         logging.info('Catalog contains entries; appending')
     else:

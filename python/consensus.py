@@ -60,7 +60,7 @@ db = client['radio']
 
 subjects = db['radio_subjects'] # subjects = images
 classifications = db['radio_classifications'] # classifications = classifications of each subject per user
-consensus = db['consensus_dr1'] # consensus = output of this program
+consensus = db['weighted_consensus_dr1'] # consensus = output of this program
 user_weights = db['user_weights_dr1']
 
 # Parameters for the RGZ project
@@ -263,13 +263,17 @@ def checksum(zid,experts_only=False,excluded=[],no_anonymous=False,include_peak_
         weighted_c = []
         for c in clist:
             if c.has_key('user_name'):
-                weight = user_weights.find_one({'user_name':c['user_name']})['weight']
+                the_user = user_weights.find_one({'user_name':c['user_name']})
+                if not the_user:
+                    weight = 1
+                else:
+                    weight = the_user['weight']
                 if scheme == 'threshold' and weight == 1:
                     for i in range(weights):
                         weighted_c.append(c)
                         cdict[c['n_galaxies']].append(c['checksum'])
                 elif scheme == 'scaling' and weight > 0:
-                    for i in range(weight):
+                    for i in range(int(float(weight))):
                         weighted_c.append(c)
                         cdict[c['n_galaxies']].append(c['checksum'])
         if len(weighted_c) > 0:
@@ -1273,6 +1277,7 @@ def weight_users(unique_users, scheme, min_gs=5, min_agree=0.5, scaling=5):
                 zid_seen = zid_seen.union([zid])
                 their_answer = one_answer(zid,u)
                 their_checksums = their_answer['answer'].keys()
+                print(their_checksums)
                 science_checksums = science_answers[zid]
                 if set(their_checksums) == set(science_checksums):
                     agreed += 1
@@ -1354,8 +1359,9 @@ if __name__ == "__main__":
             
             # If you're using weights, make sure they're up to date
             if not update and weights > 1:
-                unique_users = get_unique_users()
-                weight_users(unique_users, scheme, min_gs=5, min_agree=0.5, scaling=weights)
+                logging.warning('Not recalculating weights for ATLAS')
+                # unique_users = get_unique_users()
+                # weight_users(unique_users, scheme, min_gs=5, min_agree=0.5, scaling=weights)
 
             # Run the consensus separately for different surveys, since the image parameters are different
             for survey in ('atlas',):#('atlas','first'):

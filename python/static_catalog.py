@@ -30,7 +30,7 @@ def load_data():
     client = MongoClient('localhost', 27017)
     db = client['radio'] 
     
-    catalog = db['catalog_localswire_dr1']
+    catalog = db['weighted_catalog_dr1']
 
     return catalog
 
@@ -39,7 +39,7 @@ def flat_version(catalog):
     # Write the MongoDB catalog to a CSV file, with the fields described here:
     # http://radiogalaxyzoo.pbworks.com/w/page/108921379/DR1%20testing
 
-    filename = '%s/csv/static_rgz_localswire_flat%s.csv' % (rgz_path,suffix)
+    filename = '%s/csv/static_rgz_flat%s.csv' % (rgz_path,suffix)
 
     with open(filename,'w') as f:
 
@@ -189,8 +189,8 @@ def paired_version(catalog):
     # one that contains host information, and one that contains component information
     # http://radiogalaxyzoo.pbworks.com/w/page/108921379/DR1%20testing
 
-    host_filename = '%s/csv/static_rgz_localswire_host%s.csv' % (rgz_path,suffix)
-    component_filename = '%s/csv/static_rgz_localswire_component%s.csv' % (rgz_path,suffix)
+    host_filename = '%s/csv/static_rgz_host%s.csv' % (rgz_path,suffix)
+    component_filename = '%s/csv/static_rgz_component%s.csv' % (rgz_path,suffix)
     comp_count = 0
 
     with open(host_filename,'w') as hf:

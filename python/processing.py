@@ -368,7 +368,7 @@ def getRadio(data, fits_loc, consensusObject):
     peakFluxErrmJy = contourTrees[0].sigmamJy
 
     #find center of radio source
-    raMin, raMax, decMin, decMax = np.inf, 0, np.inf, 0
+    raMin, raMax, decMin, decMax = np.inf, -np.inf, np.inf, -np.inf  # Needs to be -inf to account for southern hemisphere
     for comp in components:
         if comp['ra_range'][0] < raMin:
             raMin = comp['ra_range'][0]
