@@ -302,10 +302,11 @@ if __name__ == '__main__':
     parser.add_argument(
         'survey', choices={'first', 'atlas'},
         help='Survey to generate catalog for')
+    args = parser.parse_args()
     done = False
     while not done:
         try:
-            output = '%i entries added.' % RGZcatalog()
+            output = '%i entries added.' % RGZcatalog(args.survey)
             logging.info(output)
             print output
             done = True
