@@ -298,6 +298,10 @@ if __name__ == '__main__':
     logging.basicConfig(filename='{}/RGZcatalog_dr1.log'.format(rgz_path), level=logging.DEBUG, format='%(asctime)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     logging.captureWarnings(True)
     logging.info('Catalog run from command line')
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'survey', choices={'first', 'atlas'},
+        help='Survey to generate catalog for')
     done = False
     while not done:
         try:
