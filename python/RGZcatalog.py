@@ -21,8 +21,8 @@ from consensus import rgz_path, data_path, db, version, logfile
 in_progress_file = '%s/subject_in_progress.txt' % rgz_path
 
 def RGZcatalog(survey='first'):
-    if survey not in {'first', 'atlas'}:
-        raise ValueError('Survey must be one of "first" or "atlas", got %s' % survey)
+	if survey not in {'first', 'atlas'}:
+		raise ValueError('Survey must be one of "first" or "atlas", got %s' % survey)
 	
 	#start timer
 	starttime = time.time()
@@ -40,22 +40,22 @@ def RGZcatalog(survey='first'):
 	else:
 		catalog.create_index('catalog_id', unique=True)
 	
-    if survey == 'atlas':
-        with open('%s/atlas_subjects.txt' % rgz_path) as f:
-            lines = f.readlines()
-        pathdict = {}
-        for l in lines:
-            spl = l.strip()
-            pathdict[spl] = '%s/ATLAS/2x2/%s_radio.fits' % (data_path, spl)
-    else:
-    	#get dictionary for finding the path to FITS files and WCS headers
-    	with open('%s/first_fits.txt' % rgz_path) as f:
-    		lines = f.readlines()
-    	
-    	pathdict = {}
-    	for l in lines:
-    		spl = l.split(' ')
-    		pathdict[spl[1].strip()] = '%s/rgz/raw_images/RGZ-full.%i/FIRST-IMGS/%s.fits' % (data_path, int(spl[0]), spl[1].strip())
+	if survey == 'atlas':
+		with open('%s/atlas_subjects.txt' % rgz_path) as f:
+			lines = f.readlines()
+		pathdict = {}
+		for l in lines:
+			spl = l.strip()
+			pathdict[spl] = '%s/ATLAS/2x2/%s_radio.fits' % (data_path, spl)
+	else:
+		#get dictionary for finding the path to FITS files and WCS headers
+		with open('%s/first_fits.txt' % rgz_path) as f:
+			lines = f.readlines()
+		
+		pathdict = {}
+		for l in lines:
+			spl = l.split(' ')
+			pathdict[spl[1].strip()] = '%s/rgz/raw_images/RGZ-full.%i/FIRST-IMGS/%s.fits' % (data_path, int(spl[0]), spl[1].strip())
 	
 	#count the number of entries from this run and how many entries are in the catalog total
 	count = 0
@@ -128,12 +128,12 @@ def RGZcatalog(survey='first'):
 					sdss_match = None
 				else:
 					p2w = w.wcs_pix2world
-                    if survey == 'first':
-    					ir_ra_pixels = ir_coords[0]*w._naxis1/500.
-    					ir_dec_pixels = 1 + w._naxis2 - ir_coords[1]*w._naxis2/500.
-                    else:
-                        ir_ra_pixels = ir_coords[0] * 200./500.
-                        ir_dec_pixels = 200. - ir_coords[1] * 200./500.
+					if survey == 'first':
+						ir_ra_pixels = ir_coords[0]*w._naxis1/500.
+						ir_dec_pixels = 1 + w._naxis2 - ir_coords[1]*w._naxis2/500.
+					else:
+						ir_ra_pixels = ir_coords[0] * 200./500.
+						ir_dec_pixels = 200. - ir_coords[1] * 200./500.
 					ir_peak = p2w( np.array([[ir_ra_pixels, ir_dec_pixels]]), 1)
 					ir_pos = coord.SkyCoord(ir_peak[0][0], ir_peak[0][1], unit=(u.deg,u.deg), frame='icrs')
 				
@@ -175,10 +175,10 @@ def RGZcatalog(survey='first'):
 							else:
 								raise e
 
-                elif ir_pos and survey == 'atlas':
-                    swire_match = p.getSWIRE(entry)
-                    if swire_match:
-                        entry.update({'SWIRE':swire_match})
+				elif ir_pos and survey == 'atlas':
+					swire_match = p.getSWIRE(entry)
+					if swire_match:
+						entry.update({'SWIRE':swire_match})
 				
 				#try block attempts to read JSON from web; if it exists, calculate data
 				try:
@@ -238,8 +238,8 @@ def RGZcatalog(survey='first'):
 					#use WISE catalog name if available
 					if ir_pos and survey == 'first' and wise_match:  # short-circuits
 						entry.update({'rgz_name':'RGZ{}{}'.format(wise_match['designation'][5:14], wise_match['designation'][15:22])})
-                    elif ir_pos and survey == 'atlas' and swire_match:
-                        entry.update({'rgz_name':'RGZ{}{}'.format(swire_match['designation'][5:14], swire_match['designation'][15:22])})
+					elif ir_pos and survey == 'atlas' and swire_match:
+						entry.update({'rgz_name':'RGZ{}{}'.format(swire_match['designation'][5:14], swire_match['designation'][15:22])})
 					else:
 						#if not, try consensus IR position
 						if ir_pos:
@@ -258,33 +258,33 @@ def RGZcatalog(survey='first'):
 						dec_s = int((dec - dec_d - dec_m/60.)*3600)
 						entry.update({'rgz_name':'RGZJ{:0=2}{:0=2}{:0=4.1f}{:0=+3}{:0=2}{:0=2}'.format(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)})
 					
-                    if survey == 'first':
-    					#calculate physical data using redshift from SDSS
-    					if sdss_match:
-    						z = 0
-    						if 'spec_redshift' in sdss_match:
-    							z = sdss_match['spec_redshift']
-    						elif 'photo_redshift' in sdss_match:
-    							z = sdss_match['photo_redshift']
-    						if z>0:
-    							DAkpc = float(cosmo.angular_diameter_distance(z)/u.kpc) #angular diameter distance in kpc
-    							DLm = float(cosmo.luminosity_distance(z)/u.m) #luminosity distance in m
-    							maxPhysicalExtentKpc = DAkpc*radio_data['radio']['max_angular_extent']*np.pi/180/3600 #arcseconds to radians
-    							totalCrossSectionKpc2 = np.square(DAkpc)*radio_data['radio']['total_solid_angle']*np.square(np.pi/180/3600) #arcseconds^2 to radians^2
-    							totalLuminosityWHz = radio_data['radio']['total_flux']*1e-29*4*np.pi*np.square(DLm) #mJy to W/(m^2 Hz), kpc to m
-    							totalLuminosityErrWHz = radio_data['radio']['total_flux_err']*1e-29*4*np.pi*np.square(DLm)
-    							peakLuminosityErrWHz = radio_data['radio']['peak_flux_err']*1e-29*4*np.pi*np.square(DLm)
-    							for component in radio_data['radio']['components']:
-    								component['physical_extent'] = DAkpc*component['angular_extent']*np.pi/180/3600
-    								component['cross_section'] = np.square(DAkpc)*component['solid_angle']*np.square(np.pi/180/3600)
-    								component['luminosity'] = component['flux']*1e-29*4*np.pi*np.square(DLm)
-    								component['luminosity_err'] = component['flux_err']*1e-29*4*np.pi*np.square(DLm)
-    							for peak in radio_data['radio']['peaks']:
-    								peak['luminosity'] = peak['flux']*1e-29*4*np.pi*np.square(DLm)
-    							entry['radio'].update({'max_physical_extent':maxPhysicalExtentKpc, 'total_cross_section':totalCrossSectionKpc2, \
-    												   'total_luminosity':totalLuminosityWHz, 'total_luminosity_err':totalLuminosityErrWHz, \
-    												   'peak_luminosity_err':peakLuminosityErrWHz})
-    					
+					if survey == 'first':
+						#calculate physical data using redshift from SDSS
+						if sdss_match:
+							z = 0
+							if 'spec_redshift' in sdss_match:
+								z = sdss_match['spec_redshift']
+							elif 'photo_redshift' in sdss_match:
+								z = sdss_match['photo_redshift']
+							if z>0:
+								DAkpc = float(cosmo.angular_diameter_distance(z)/u.kpc) #angular diameter distance in kpc
+								DLm = float(cosmo.luminosity_distance(z)/u.m) #luminosity distance in m
+								maxPhysicalExtentKpc = DAkpc*radio_data['radio']['max_angular_extent']*np.pi/180/3600 #arcseconds to radians
+								totalCrossSectionKpc2 = np.square(DAkpc)*radio_data['radio']['total_solid_angle']*np.square(np.pi/180/3600) #arcseconds^2 to radians^2
+								totalLuminosityWHz = radio_data['radio']['total_flux']*1e-29*4*np.pi*np.square(DLm) #mJy to W/(m^2 Hz), kpc to m
+								totalLuminosityErrWHz = radio_data['radio']['total_flux_err']*1e-29*4*np.pi*np.square(DLm)
+								peakLuminosityErrWHz = radio_data['radio']['peak_flux_err']*1e-29*4*np.pi*np.square(DLm)
+								for component in radio_data['radio']['components']:
+									component['physical_extent'] = DAkpc*component['angular_extent']*np.pi/180/3600
+									component['cross_section'] = np.square(DAkpc)*component['solid_angle']*np.square(np.pi/180/3600)
+									component['luminosity'] = component['flux']*1e-29*4*np.pi*np.square(DLm)
+									component['luminosity_err'] = component['flux_err']*1e-29*4*np.pi*np.square(DLm)
+								for peak in radio_data['radio']['peaks']:
+									peak['luminosity'] = peak['flux']*1e-29*4*np.pi*np.square(DLm)
+								entry['radio'].update({'max_physical_extent':maxPhysicalExtentKpc, 'total_cross_section':totalCrossSectionKpc2, \
+													   'total_luminosity':totalLuminosityWHz, 'total_luminosity_err':totalLuminosityErrWHz, \
+													   'peak_luminosity_err':peakLuminosityErrWHz})
+						
 					logging.info('Radio data added')
 									   
 				#if the link doesn't have a JSON, no data can be determined
@@ -324,11 +324,11 @@ if __name__ == '__main__':
 	assert db['consensus{}'.format(version)].count()>0, 'RGZ consensus{} collection not in Mongo database'.format(version)
 	assert db['wise_pz'].count()>0, 'WISExSCOSPZ catalog not in Mongo database'
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        'survey', choices={'first', 'atlas'},
-        help='Survey to generate catalog for')
-    args = parser.parse_args()
+	parser = argparse.ArgumentParser()
+	parser.add_argument(
+		'survey', choices={'first', 'atlas'},
+		help='Survey to generate catalog for')
+	args = parser.parse_args()
 	
 	done = False
 	while not done:
