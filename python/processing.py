@@ -5,17 +5,12 @@ from astroquery.exceptions import TimeoutError, TableParseError
 from astroquery.irsa import Irsa
 import numpy as np
 import pandas as pd
-import astropy.io.ascii
-import sklearn.neighbors
 
 #custom modules for the RGZ catalog
 import catalog_functions as fn #contains miscellaneous helper functions
 import contour_node as c #contains Node class
 from consensus import rgz_path
 
-# We'll populate these later and cache them here for speed.
-_swire_tree = None
-_swire_table = None
 def getSWIRE(entry):
     '''
     get IR data from SWIRE-CDFS Source Catalog
