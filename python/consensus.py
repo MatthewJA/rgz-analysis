@@ -21,6 +21,7 @@ from load_contours import get_contours,make_pathdict
 
 # Packges (installed by default with Python)
 
+import argparse
 import datetime
 import operator
 from collections import Counter
@@ -60,7 +61,7 @@ db = client['radio']
 
 subjects = db['radio_subjects'] # subjects = images
 classifications = db['radio_classifications'] # classifications = classifications of each subject per user
-consensus = db['weighted_consensus_dr1'] # consensus = output of this program
+consensus = db['consensus_dr1'] # consensus = output of this program
 user_weights = db['user_weights_dr1']
 
 # Parameters for the RGZ project
@@ -114,17 +115,20 @@ def determine_paths(paths):
         print paths
         return None
 
-rgz_path = determine_paths(('/Users/willettk/Astronomy/Research/GalaxyZoo/rgz-analysis','/data/tabernacle/larry/RGZdata/rgz-analysis', '/mimsy/alger/dr1/rgz'))
-#rgz_path = '/home/garon/Documents/RGZdata/rgz-analysis'
-data_path = determine_paths(('/Volumes/REISEPASS','/Volumes/3TB','/data/extragal/willett','/data/tabernacle/larry/RGZdata/rawdata', '/mimsy/alger/dr1/raw_images'))
+rgz_path = determine_paths((
+    '/Users/willettk/Astronomy/Research/GalaxyZoo/rgz-analysis',
+    '/data/tabernacle/larry/RGZdata/rgz-analysis',
+    '/mimsy/alger/dr1/rgz',
+    '/home/garon/Documents/RGZdata/rgz-analysis'))
+data_path = determine_paths((
+    '/Volumes/REISEPASS',
+    '/Volumes/3TB',
+    '/data/extragal/willett',
+    '/data/tabernacle/larry/RGZdata/rawdata',
+    '/mimsy/alger/dr1/raw_images'))
 plot_path = "{0}/rgz/plots".format(data_path)
 
-ATLAS_GS = []
-with open(os.path.join(rgz_path, 'atlas_gold_standard.txt')) as f:
-    for row in f:
-        ATLAS_GS.append(row.strip())  # Zooniverse ID
-
-pathdict = make_pathdict(atlas_only=True)
+pathdict = make_pathdict(atlas_only=False)
 
 ########################################
 # Begin the actual code
@@ -263,8 +267,9 @@ def checksum(zid,experts_only=False,excluded=[],no_anonymous=False,include_peak_
         weighted_c = []
         for c in clist:
             if c.has_key('user_name'):
+                # TODO(afgaron): Confirm this modification follows the intended logic.
                 the_user = user_weights.find_one({'user_name':c['user_name']})
-                if not the_user:
+                if not the_user:  # User has no assigned weighting.
                     weight = 1
                 else:
                     weight = the_user['weight']
@@ -1245,19 +1250,24 @@ def weight_users(unique_users, scheme, min_gs=5, min_agree=0.5, scaling=5):
     
     # Assigns a weight to users based on their agreement with the gold standard sample as classified by RGZ science team
     
-    gs_count = subjects.find({'zooniverse_id': {'$in': ATLAS_GS}}).count()
-    ex_count = classifications.find({'zooniverse_id': {'$in': ATLAS_EX}}).count()
+    gs_count = subjects.find({'goldstandard':True}).count()
+    if gs_count < 1:
+        update_gs_subjects()
+    
+    ex_count = classifications.find({'expert':True}).count()
+    if ex_count < 1:
+        update_experts()
     
     # Find the science team answers:
     
-    gs_zids = ATLAS_GS
+    gs_zids = [s['zooniverse_id'] for s in subjects.find({"goldstandard":True})]
     science_answers = {}
     
     for zid in gs_zids:
         s = checksum(zid,experts_only=True)
         science_answers[zid] = s['answer'].keys()
     
-    gs_ids = [s['_id'] for s in subjects.find({'zooniverse_id': {'$in': ATLAS_GS}})]
+    gs_ids = [s['_id'] for s in subjects.find({"goldstandard":True})]
     count = 0
 
     # For each user, find the gold standard subjects they saw and whether it agreed with the experts
@@ -1277,7 +1287,6 @@ def weight_users(unique_users, scheme, min_gs=5, min_agree=0.5, scaling=5):
                 zid_seen = zid_seen.union([zid])
                 their_answer = one_answer(zid,u)
                 their_checksums = their_answer['answer'].keys()
-                print(their_checksums)
                 science_checksums = science_answers[zid]
                 if set(their_checksums) == set(science_checksums):
                     agreed += 1
@@ -1314,6 +1323,16 @@ if __name__ == "__main__":
     logging.basicConfig(filename='{}/consensus_dr1.log'.format(rgz_path), level=logging.DEBUG, format='%(asctime)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     logging.captureWarnings(True)
     logging.info('Consensus run from command line')
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'survey', choices={'atlas', 'first'},
+        help='Survey to generate consensus for.')
+    args = parser.parse_args()
+
+    if args.survey == 'atlas':
+        # This lets you run the ATLAS pipeline without actually having FIRST data.
+        pathdict = make_pathdict(atlas_only=True)
 
     try:
         
@@ -1359,14 +1378,14 @@ if __name__ == "__main__":
             
             # If you're using weights, make sure they're up to date
             if not update and weights > 1:
-                logging.warning('Not recalculating weights for ATLAS')
-                # unique_users = get_unique_users()
-                # weight_users(unique_users, scheme, min_gs=5, min_agree=0.5, scaling=weights)
+                if args.survey == 'atlas':
+                    logging.warning('Not recalculating weights for ATLAS')
+                else:
+                    unique_users = get_unique_users()
+                    weight_users(unique_users, scheme, min_gs=5, min_agree=0.5, scaling=weights)
 
             # Run the consensus separately for different surveys, since the image parameters are different
-            for survey in ('atlas',):#('atlas','first'):
-                if survey == 'first':
-                    raise NotImplementedError('Only ATLAS is supported in this file.')
+            for survey in (args.survey,):#('atlas','first'):
                 run_sample(survey,update,subset,do_plot,weights,scheme)
 
             output = 'Finished at',datetime.datetime.now().strftime('%H:%M:%S.%f')
