@@ -4,6 +4,7 @@ consensus matching information, radio morphology, IR counterpart location, and d
 AllWISE and SDSS catalogs.
 '''
 
+import argparse
 import logging, urllib2, time, json, os, datetime
 import pymongo
 import numpy as np
@@ -253,9 +254,15 @@ def RGZcatalog(survey='first'):
 						ra_h = int(ra/15.)
 						ra_m = int((ra - ra_h*15)*4)
 						ra_s = (ra - ra_h*15 - ra_m/4.)*240
-						dec_d = int(dec)
-						dec_m = int((dec - dec_d)*60)
-						dec_s = int((dec - dec_d - dec_m/60.)*3600)
+						if dec < 0:
+							dec_ = -dec
+							sign = '-'
+						else:
+							dec_ = dec
+							sign = '+'
+						dec_d = int(dec_)
+						dec_m = int((dec_ - dec_d)*60)
+						dec_s = int((dec_ - dec_d - dec_m/60.)*3600)
 						entry.update({'rgz_name':'RGZJ{:0=2}{:0=2}{:0=4.1f}{:0=+3}{:0=2}{:0=2}'.format(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)})
 					
 					if survey == 'first':
@@ -320,16 +327,18 @@ if __name__ == '__main__':
 	logging.captureWarnings(True)
 	logging.info('Catalog run from command line')
 	
+	parser = argparse.ArgumentParser()
+        parser.add_argument(
+                'survey', choices={'first', 'atlas'},
+                help='Survey to generate catalog for')
+        args = parser.parse_args()
+
 	assert db['radio_subjects'].count()>0, 'RGZ subjects collection not in Mongo database'
 	assert db['consensus{}'.format(version)].count()>0, 'RGZ consensus{} collection not in Mongo database'.format(version)
-	assert db['wise_pz'].count()>0, 'WISExSCOSPZ catalog not in Mongo database'
-
-	parser = argparse.ArgumentParser()
-	parser.add_argument(
-		'survey', choices={'first', 'atlas'},
-		help='Survey to generate catalog for')
-	args = parser.parse_args()
 	
+	if args.survey == 'first':
+		assert db['wise_pz'].count()>0, 'WISExSCOSPZ catalog not in Mongo database'
+
 	done = False
 	while not done:
 		try:
