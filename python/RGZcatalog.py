@@ -239,7 +239,7 @@ def RGZcatalog(survey='first'):
 					if ir_pos and survey == 'first' and wise_match:  # short-circuits
 						entry.update({'rgz_name':'RGZ{}{}'.format(wise_match['designation'][5:14], wise_match['designation'][15:22])})
 					elif ir_pos and survey == 'atlas' and swire_match:
-						entry.update({'rgz_name':'RGZ{}{}'.format(swire_match['designation'][5:14], swire_match['designation'][15:22])})
+						entry.update({'rgz_name':'RGZ{}{}'.format(swire_match['designation'][7:17], swire_match['designation'][17:26])})
 					else:
 						#if not, try consensus IR position
 						if ir_pos:
