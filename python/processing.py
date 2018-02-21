@@ -293,19 +293,26 @@ def getSDSS(entry):
 	
 	return sdss_match
 
-def getRadio(data, fits_loc, source):
+def getRadio(data, fits_loc, source, survey='first'):
 	'''
 	calculates all of the radio parameters from the fits file
 	data is a JSON object downloaded from the online RGZ interface
 	fits_loc is the fits file on the physical drive
+	survey is 'first' or 'atlas'
 	'''
+	if survey == 'first':
+		Node = c.FIRSTNode
+	elif survey == 'atlas':
+		Node = c.ATLASNode
+	else:
+		raise ValueError('survey should be one of {\'first\', \'atlas\'}.')
 	
 	#create list of trees, each containing a contour and its contents
 	contourTrees = []
 	for contour, bbox in itertools.product(data['contours'], source['bbox']):
 		if fn.approx(contour[0]['bbox'][0], bbox[0]) and fn.approx(contour[0]['bbox'][1], bbox[1]) and \
 		   fn.approx(contour[0]['bbox'][2], bbox[2]) and fn.approx(contour[0]['bbox'][3], bbox[3]):
-			tree = c.Node(contour=contour, fits_loc=fits_loc)
+			tree = Node(contour=contour, fits_loc=fits_loc)
 			contourTrees.append(tree)
 	
 	#get component fluxes and sizes
@@ -384,4 +391,3 @@ def getRadio(data, fits_loc, source):
 						   'ra':meanRa, 'dec':meanDec}}
 	
 	return radio_data
->>>>>>> master

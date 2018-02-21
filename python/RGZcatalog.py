@@ -218,7 +218,7 @@ def RGZcatalog(survey='first'):
 						uncompressed = gzip.GzipFile(fileobj=tempfile, mode='r').read() #unzips contents to str
 						data = json.loads(uncompressed) #loads JSON object
 					
-					radio_data = p.getRadio(data, fits_loc, source)
+					radio_data = p.getRadio(data, fits_loc, source, survey=survey)
 					entry.update(radio_data)
 					
 					#check if a component is straddling the edge of the image

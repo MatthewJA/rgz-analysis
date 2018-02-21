@@ -11,7 +11,7 @@ from matplotlib import path
 import catalog_functions as fn #contains custom functions
 
 class Node(object):
-    '''tree implementation for contours'''
+    '''tree implementation for contours for FIRST subjects'''
     
     def __init__(self, value=None, contour=None, fits_loc=None, img=None, w=None, sigmaJyBeam=0):
         '''tree initializer'''
@@ -24,12 +24,9 @@ class Node(object):
             self.imgSize = int(img.shape[0]) #size in pixels of FITS data
             self.w = w #WCS converter object
         dec = self.w.wcs_pix2world( np.array( [[self.imgSize/2., self.imgSize/2.]] ), 1)[0][1] #dec of image center
-        if dec > 4.5558: #northern region, above +4*33'21"
-            self.beamAreaArcsec2 = 1.44*np.pi*5.4*5.4/4 #5.4" FWHM circle
-        elif 4.5558 > dec > -2.5069: #middle region, between +4*33'21" and -2*30'25"
-            self.beamAreaArcsec2 = 1.44*np.pi*6.4*5.4/4 #6.4"x5.4" FWHM ellipse
-        else: #southern region, below -2*30'25"
-            self.beamAreaArcsec2 = 1.44*np.pi*6.8*5.4/4 #6.8"x5.4" FWHM ellipse
+
+        self.beamAreaArcsec2 = self.getBeamAreaArcsec2(dec)
+
         self.pixelAreaArcsec2 = wcs.utils.proj_plane_pixel_area(self.w)*3600*3600 #arcsecond^2
         if contour is not None:
             mad2sigma = np.sqrt(2)*erfinv(2*0.75-1) #conversion factor
@@ -49,6 +46,10 @@ class Node(object):
             self.fluxmJy = 0
             self.fluxErrmJy = 0
             self.peaks = []
+
+    def getBeamAreaArcsec2(self, dec):
+        """Override this to set the beam area."""
+        raise NotImplementedError()
     
     def insert(self, newNode):
         '''insert a contour node'''
@@ -145,3 +146,20 @@ class Node(object):
             print self.value['level']
         for child in self.children:
             child.print_contour_levels()
+
+
+class FIRSTNode(Node):
+
+    def getBeamAreaArcsec2(self, dec):
+        if dec > 4.5558: #northern region, above +4*33'21"
+            return 1.44*np.pi*5.4*5.4/4 #5.4" FWHM circle
+        if 4.5558 > dec > -2.5069: #middle region, between +4*33'21" and -2*30'25"
+            return 1.44*np.pi*6.4*5.4/4 #6.4"x5.4" FWHM ellipse
+        #southern region, below -2*30'25"
+        return 1.44*np.pi*6.8*5.4/4 #6.8"x5.4" FWHM ellipse
+
+
+class ATLASNode(Node):
+
+    def getBeamAreaArcsec2(self, dec):
+        return 1.44*np.pi*16.3*6.8/4 # 16.3"x6.8" FWHM ellipse
