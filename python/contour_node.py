@@ -33,7 +33,7 @@ class Node(object):
             self.sigmaJyBeam = (contour[0]['level']/3) / mad2sigma #standard deviation of flux density measurements
             self.sigmamJy = self.sigmaJyBeam*1000*self.pixelAreaArcsec2/self.beamAreaArcsec2
             for i in contour:
-                self.insert(Node(value=i, img=self.img, w=self.w, sigmaJyBeam=self.sigmaJyBeam))
+                self.insert(type(self)(value=i, img=self.img, w=self.w, sigmaJyBeam=self.sigmaJyBeam))
             vertices = []
             for pos in contour[0]['arr']:
                 vertices.append([pos['x'], pos['y']])
