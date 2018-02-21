@@ -21,9 +21,9 @@ consensus_level = 0.0
 # Define a suffix that will be appended to the filename of the new catalog output.
 
 if consensus_level == 0.:
-    suffix = '_full'
+    suffix = '{}_full'.format(version)
 else:
-    suffix = ''
+    suffix = '{}'.format(version)
 
 def load_data():
 
@@ -96,7 +96,7 @@ def flat_version(catalog, survey='first'):
                 cids_for_removal.append(c['catalog_id'])
         
         # Select all matching galaxies (in this case, sources with optical and IR counterparts)
-        args = {'catalog_id':{'$nin':cids_for_removal},'consensus.radio_level':{'$gte':consensus_level}}#,'SDSS':{'$exists':True},'AllWISE':{'$exists':True}}
+        args = {'catalog_id':{'$nin':cids_for_removal},'consensus.radio_level':{'$gte':consensus_level}}
         
         # Loop over number of RGZ catalog entries that match the consensus requirements
         for c in catalog.find(args).sort([('catalog_id', 1)]):
@@ -298,7 +298,7 @@ def paired_version(catalog, survey='first'):
                     cids_for_removal.append(c['catalog_id'])
             
             # Select all matching galaxies (in this case, sources with optical and IR counterparts)
-            args = {'catalog_id':{'$nin':cids_for_removal},'consensus.radio_level':{'$gte':consensus_level}}#,'SDSS':{'$exists':True},'AllWISE':{'$exists':True}}
+            args = {'catalog_id':{'$nin':cids_for_removal},'consensus.radio_level':{'$gte':consensus_level}}
 
             # Loop over number of RGZ catalog entries that match the consensus requirements
             for c in catalog.find(args).sort([('catalog_id', 1)]):

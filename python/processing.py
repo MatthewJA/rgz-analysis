@@ -12,6 +12,7 @@ import catalog_functions as fn #contains miscellaneous helper functions
 import contour_node as c #contains Node class
 from consensus import rgz_path
 
+
 def getSWIRE(entry):
     '''
     get IR data from SWIRE-CDFS Source Catalog
@@ -292,7 +293,6 @@ def getSDSS(entry):
 	
 	return sdss_match
 
-
 def getRadio(data, fits_loc, source):
 	'''
 	calculates all of the radio parameters from the fits file
@@ -351,8 +351,9 @@ def getRadio(data, fits_loc, source):
 								  [components[j]['ra_range'][1], components[j]['dec_range'][1]] ])
 			pos1 = coord.SkyCoord(corners1.T[0], corners1.T[1], unit=(u.deg, u.deg))
 			pos2 = coord.SkyCoord(corners2.T[0], corners2.T[1], unit=(u.deg, u.deg))
-			angularExtentArcsec = pos1.separation(pos2).arcsecond
-			maxAngularExtentArcsec = max(np.append(angularExtentArcsec, maxAngularExtentArcsec))
+			for c1, c2 in itertools.product(pos1, pos2):
+				angularExtentArcsec = c1.separation(c2).arcsecond
+				maxAngularExtentArcsec = max(np.append(angularExtentArcsec, maxAngularExtentArcsec))
 	
 	#add all peaks up into single list
 	peakList = []
@@ -383,3 +384,4 @@ def getRadio(data, fits_loc, source):
 						   'ra':meanRa, 'dec':meanDec}}
 	
 	return radio_data
+>>>>>>> master

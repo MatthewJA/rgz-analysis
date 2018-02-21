@@ -60,7 +60,7 @@ client = MongoClient('localhost', 27017)
 db = client['radio'] 
 
 # Select which version of the catalog to use
-version = '_bending'
+version = '_2016-08-02'
 subjects = db['radio_subjects'] # subjects = images
 classifications = db['radio_classifications'] # classifications = classifications of each subject per user
 consensus = db['consensus{}'.format(version)] # consensus = output of this program
@@ -1277,12 +1277,11 @@ def weight_users(unique_users, scheme, min_gs=5, min_agree=0.5, scaling=5):
     
     gs_ids = [s['_id'] for s in subjects.find({"goldstandard":True})]
     count = 0
-
+    
     # For each user, find the gold standard subjects they saw and whether it agreed with the experts
     for u in list(unique_users):
         count += 1
         print count, u
-        logging.info((count, u))
         
         agreed = 0
         u_str = u.encode('utf8')
