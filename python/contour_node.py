@@ -30,7 +30,7 @@ class Node(object):
         self.pixelAreaArcsec2 = wcs.utils.proj_plane_pixel_area(self.w)*3600*3600 #arcsecond^2
         if contour is not None:
             mad2sigma = np.sqrt(2)*erfinv(2*0.75-1) #conversion factor
-            self.sigmaJyBeam = (contour[0]['level']/3) / mad2sigma #standard deviation of flux density measurements
+            self.sigmaJyBeam = self.getSigmaJyBeamConversionFactor() * (contour[0]['level']/3) / mad2sigma #standard deviation of flux density measurements
             self.sigmamJy = self.sigmaJyBeam*1000*self.pixelAreaArcsec2/self.beamAreaArcsec2
             for i in contour:
                 self.insert(type(self)(value=i, img=self.img, w=self.w, sigmaJyBeam=self.sigmaJyBeam))
@@ -46,6 +46,10 @@ class Node(object):
             self.fluxmJy = 0
             self.fluxErrmJy = 0
             self.peaks = []
+
+    def getSigmaJyBeamConversionFactor(self):
+        """Returns a conversion factor to convert sigma into Jy Beam^-1."""
+        raise NotImplementedError()
 
     def getBeamAreaArcsec2(self, dec):
         """Override this to set the beam area."""
@@ -158,8 +162,14 @@ class FIRSTNode(Node):
         #southern region, below -2*30'25"
         return 1.44*np.pi*6.8*5.4/4 #6.8"x5.4" FWHM ellipse
 
+    def getSigmaJyBeamConversionFactor(self):
+        return 1
+
 
 class ATLASNode(Node):
 
     def getBeamAreaArcsec2(self, dec):
         return 1.44*np.pi*16.3*6.8/4 # 16.3"x6.8" FWHM ellipse
+
+    def getSigmaJyBeamConversionFactor(self):
+        return 1e-6
