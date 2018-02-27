@@ -30,7 +30,7 @@ class Node(object):
         self.pixelAreaArcsec2 = wcs.utils.proj_plane_pixel_area(self.w)*3600*3600 #arcsecond^2
         if contour is not None:
             mad2sigma = np.sqrt(2)*erfinv(2*0.75-1) #conversion factor
-            self.sigmaJyBeam = self.getSigmaJyBeamConversionFactor() * (contour[0]['level']/3) / mad2sigma #standard deviation of flux density measurements
+            self.sigmaJyBeam = self.getJyBeamConversionFactor() * (contour[0]['level']/3) / mad2sigma #standard deviation of flux density measurements
             self.sigmamJy = self.sigmaJyBeam*1000*self.pixelAreaArcsec2/self.beamAreaArcsec2
             for i in contour:
                 self.insert(type(self)(value=i, img=self.img, w=self.w, sigmaJyBeam=self.sigmaJyBeam))
@@ -47,8 +47,8 @@ class Node(object):
             self.fluxErrmJy = 0
             self.peaks = []
 
-    def getSigmaJyBeamConversionFactor(self):
-        """Returns a conversion factor to convert sigma into Jy Beam^-1."""
+    def getJyBeamConversionFactor(self):
+        """Returns a conversion factor to convert values into Jy Beam^-1."""
         raise NotImplementedError()
 
     def getBeamAreaArcsec2(self, dec):
@@ -100,7 +100,7 @@ class Node(object):
         for i in range(self.imgSize-1):
             for j in range(self.imgSize-1):
                 if self.contains([i+1, self.imgSize-j]):
-                    fluxDensityJyBeam += self.img[j][i]
+                    fluxDensityJyBeam += self.img[j][i] * self.getJyBeamConversionFactor()
                     pixelCount += 1
         self.areaArcsec2 = pixelCount*self.pixelAreaArcsec2
         fluxDensityErrJyBeam = np.sqrt(pixelCount)*self.sigmaJyBeam
@@ -116,6 +116,7 @@ class Node(object):
             bbox = fn.bboxToDS9(fn.findBox(self.value['arr']), self.imgSize)[0] #bbox of innermost contour
             fluxDensityJyBeam = self.img[ int(bbox[3]):int(bbox[1]+1), int(bbox[2]):int(bbox[0]+1) ].max() #peak flux in bbox, with 1 pixel padding
             x, y = [i[0]+1 for i in np.where(self.img == fluxDensityJyBeam)] #location in pixels
+            fluxDensityJyBeam *= self.getJyBeamConversionFactor()  # must come after the == check
             
             #make sure it's not a multi-pixel peak
             ignore = False
@@ -162,7 +163,7 @@ class FIRSTNode(Node):
         #southern region, below -2*30'25"
         return 1.44*np.pi*6.8*5.4/4 #6.8"x5.4" FWHM ellipse
 
-    def getSigmaJyBeamConversionFactor(self):
+    def getJyBeamConversionFactor(self):
         return 1
 
 
@@ -171,5 +172,5 @@ class ATLASNode(Node):
     def getBeamAreaArcsec2(self, dec):
         return 1.44*np.pi*16.3*6.8/4 # 16.3"x6.8" FWHM ellipse
 
-    def getSigmaJyBeamConversionFactor(self):
-        return 1e-6
+    def getJyBeamConversionFactor(self):
+        return 1e-3
